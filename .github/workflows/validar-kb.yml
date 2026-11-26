@@ -1,0 +1,100 @@
+name: Validar Metadatos YAML de la KB
+
+on:
+  push:
+    paths:
+      - '**.md'
+  pull_request:
+    paths:
+      - '**.md'
+
+jobs:
+  validar-yaml:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar PyYAML
+        run: pip install pyyaml
+
+      - name: Comprobar esquema YAML en todos los .md
+        run: |
+          python3 - << 'EOF'
+          import glob, re, sys, yaml
+          from datetime import date
+
+          CATEGORIAS = {'identidad', 'catalogo_servicios', 'pnt', 'mutuas', 
+'infraestructura', 'parafarmacia'}
+          DEPARTAMENTOS = {'clinica', 'estetica', 'obesidad', 'recepcion', 
+'medicos', 'parafarmacia', 'gestion'}
+          ACCESOS = {'publico', 'staff', 'sanitario', 'direccion'}
+
+          errores = []
+
+          for filepath in glob.glob('**/*.md', recursive=True):
+              if filepath.upper() == 'README.MD':
+                  continue
+
+              with open(filepath, 'r', encoding='utf-8') as f:
+                  content = f.read()
+
+              match = re.match(r'^---\r?\n([\s\S]*?)\r?\n---', content)
+              if not match:
+                  errores.append(f"❌ {filepath}: Falta el bloque YAML 
+inicial (--- ... ---)")
+                  continue
+
+              try:
+                  meta = yaml.safe_load(match.group(1)) or {}
+              except yaml.YAMLError as e:
+                  errores.append(f"❌ {filepath}: Error de sintaxis YAML -> 
+{e}")
+                  continue
+
+              # 1. Validar campos obligatorios
+              for campo in ['categoria', 'departamento', 'acceso', 
+'ultima_revision']:
+                  if campo not in meta or meta[campo] is None:
+                      errores.append(f"❌ {filepath}: Falta el campo 
+obligatorio '{campo}'")
+
+              # 2. Validar valores permitidos (enum)
+              if meta.get('categoria') not in CATEGORIAS:
+                  errores.append(f"❌ {filepath}: 'categoria' inválida 
+({meta.get('categoria')}). Permitidas: {CATEGORIAS}")
+
+              if meta.get('departamento') not in DEPARTAMENTOS:
+                  errores.append(f"❌ {filepath}: 'departamento' inválido 
+({meta.get('departamento')}). Permitidos: {DEPARTAMENTOS}")
+
+              if meta.get('acceso') not in ACCESOS:
+                  errores.append(f"❌ {filepath}: 'acceso' inválido 
+({meta.get('acceso')}). Permitidos: {ACCESOS}")
+
+              # 3. Validar regla de codigo_pnt
+              if meta.get('categoria') == 'pnt':
+                  cod = str(meta.get('codigo_pnt', ''))
+                  if not re.match(r'^PNT-[A-Z]{3}-\d{3}$', cod):
+                      errores.append(f"❌ {filepath}: Los PNTs requieren 
+'codigo_pnt' con formato PNT-XXX-000 (actual: {cod})")
+
+              # 4. Validar formato de fecha YYYY-MM-DD
+              rev = meta.get('ultima_revision')
+              if not isinstance(rev, date) and not 
+re.match(r'^\d{4}-\d{2}-\d{2}$', str(rev)):
+                  errores.append(f"❌ {filepath}: 'ultima_revision' debe 
+tener formato YYYY-MM-DD")
+
+          if errores:
+              print("\n".join(errores))
+              sys.exit(1)
+          else:
+              print("✅ Todos los documentos cumplen con el esquema YAML de 
+Centre Sanitari Villaquet.")
+          EOF

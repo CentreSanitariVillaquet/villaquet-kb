@@ -1,0 +1,23 @@
+{
+  "Cabecera KB Villaquet": {
+    "prefix": "kb",
+    "body": [
+      "---",
+      "categoria: 
+${1|catalogo_servicios,pnt,mutuas,infraestructura,parafarmacia,identidad|}",
+      "departamento: 
+${2|clinica,estetica,obesidad,recepcion,medicos,parafarmacia,gestion|}",
+      "acceso: ${3|publico,staff,sanitario,direccion|}",
+      "codigo_pnt: ${4:null}",
+      "ultima_revision: $CURRENT_YEAR-$CURRENT_MONTH-$CURRENT_DATE",
+      "---",
+      "",
+      "# ${5:Título del Documento}",
+      "",
+      "## ${6:Sección Principal}",
+      "$0"
+    ],
+    "description": "Inserta la cabecera YAML estándar de Centre Sanitari 
+Villaquet"
+  }
+}
