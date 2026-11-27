@@ -3,7 +3,7 @@ categoria: identidad
 departamento: clinica
 acceso: publico
 codigo_pnt: null
-ultima_revision: 2026-11-26
+ultima_revision: 2026-11-27
 ---
 
 # Identidad y Contacto — Centre Sanitari Villaquet
